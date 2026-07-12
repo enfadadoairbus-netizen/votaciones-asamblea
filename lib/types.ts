@@ -9,6 +9,8 @@ export type Profile = {
   role: Role;
 };
 
+export type AdminPerson = Profile & { account_email: string };
+
 export type WorkCenter = { id: string; name: string; code: string | null };
 
 export type Proposal = {
