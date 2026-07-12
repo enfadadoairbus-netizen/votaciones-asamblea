@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { WorkCenter, Profile } from "@/lib/types";
+import type { WorkCenter, Profile, AdminPerson } from "@/lib/types";
 import AdminPanel from "./AdminPanel";
 
 export const dynamic = "force-dynamic";
@@ -29,11 +29,8 @@ export default async function AdminPage() {
     .order("name")
     .returns<WorkCenter[]>();
 
-  const { data: people } = await supabase
-    .from("profiles")
-    .select("id, full_name, corporate_email, corporate_email_verified, role, work_center_id")
-    .order("full_name")
-    .returns<Profile[]>();
+  const { data: peopleData } = await supabase.rpc("admin_list_people");
+  const people = (peopleData ?? []) as AdminPerson[];
 
   return (
     <div className="space-y-4">
@@ -41,7 +38,7 @@ export default async function AdminPage() {
       <AdminPanel
         domains={settings?.allowed_domains ?? []}
         centers={centers ?? []}
-        people={people ?? []}
+        people={people}
       />
     </div>
   );

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import type { WorkCenter, Profile, Role } from "@/lib/types";
+import type { WorkCenter, AdminPerson, Role } from "@/lib/types";
 
 export default function AdminPanel({
   domains,
@@ -12,7 +12,7 @@ export default function AdminPanel({
 }: {
   domains: string[];
   centers: WorkCenter[];
-  people: Profile[];
+  people: AdminPerson[];
 }) {
   const router = useRouter();
   const supabase = createClient();
@@ -174,7 +174,9 @@ export default function AdminPanel({
                 />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm">{p.full_name || "(sin nombre)"}</p>
+                  <p className="truncate text-xs text-muted">{p.account_email}</p>
                   <p className="truncate text-xs text-muted">
+                    {p.corporate_email ? `Corp: ${p.corporate_email} · ` : ""}
                     {p.corporate_email_verified ? (
                       <span className="text-favor">✓ verificado</span>
                     ) : (
