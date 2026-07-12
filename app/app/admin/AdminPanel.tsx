@@ -7,16 +7,19 @@ import type { WorkCenter, AdminPerson, Role } from "@/lib/types";
 
 export default function AdminPanel({
   domains,
+  requireVerification,
   centers,
   people,
 }: {
   domains: string[];
+  requireVerification: boolean;
   centers: WorkCenter[];
   people: AdminPerson[];
 }) {
   const router = useRouter();
   const supabase = createClient();
   const [domainText, setDomainText] = useState(domains.join(", "));
+  const [requireVerif, setRequireVerif] = useState(requireVerification);
   const [newCenter, setNewCenter] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   // Correo corporativo editable por persona (para la verificación individual)
@@ -39,6 +42,21 @@ export default function AdminPanel({
       .from("settings")
       .upsert({ id: true, allowed_domains: list, updated_at: new Date().toISOString() });
     setMsg(error ? error.message : "Dominios guardados.");
+    router.refresh();
+  }
+
+  async function toggleRequireVerif(value: boolean) {
+    setMsg(null);
+    setRequireVerif(value);
+    const { error } = await supabase
+      .from("settings")
+      .upsert({ id: true, require_corporate_verification: value, updated_at: new Date().toISOString() });
+    if (error) {
+      setRequireVerif(!value); // revierte en caso de error
+      setMsg(error.message);
+    } else {
+      setMsg(value ? "Verificación por email ACTIVADA." : "Verificación por email DESACTIVADA.");
+    }
     router.refresh();
   }
 
@@ -117,6 +135,25 @@ export default function AdminPanel({
         <p className="text-xs text-muted">Separados por comas. Ej: empresa.com, empresa.es</p>
         <input className="input" value={domainText} onChange={(e) => setDomainText(e.target.value)} />
         <button className="btn-brand" onClick={saveDomains}>Guardar dominios</button>
+      </section>
+
+      <section className="card space-y-2">
+        <h2 className="text-sm font-semibold">Verificación del correo corporativo</h2>
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="mt-1"
+            checked={requireVerif}
+            onChange={(e) => toggleRequireVerif(e.target.checked)}
+          />
+          <span>
+            Exigir verificación del correo corporativo para votar.
+            <span className="mt-1 block text-xs text-muted">
+              Si está desactivado, se puede votar sin verificar el correo (el control recae en el
+              código presencial de cada propuesta). Actívalo cuando el envío de correos esté listo.
+            </span>
+          </span>
+        </label>
       </section>
 
       <section className="card space-y-2">

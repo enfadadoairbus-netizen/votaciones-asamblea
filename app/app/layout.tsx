@@ -18,8 +18,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .eq("id", user.id)
     .single<Profile>();
 
+  const { data: settings } = await supabase
+    .from("settings")
+    .select("require_corporate_verification")
+    .eq("id", true)
+    .maybeSingle<{ require_corporate_verification: boolean }>();
+
   const role = profile?.role ?? "employee";
   const verified = !!profile?.corporate_email_verified;
+  const requireVerification = settings?.require_corporate_verification ?? true;
+  const showVerifyNudge = requireVerification && !verified;
 
   return (
     <div className="min-h-screen">
@@ -33,9 +41,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </header>
 
-      <Nav role={role} verified={verified} />
+      <Nav role={role} verified={verified} requireVerification={requireVerification} />
 
-      {!verified && (
+      {showVerifyNudge && (
         <div className="bg-contra/10 px-4 py-2 text-sm text-contra">
           Aún no puedes votar: verifica tu correo corporativo desde{" "}
           <Link href="/app/perfil" className="underline">

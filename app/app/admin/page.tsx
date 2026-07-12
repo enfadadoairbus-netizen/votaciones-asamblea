@@ -19,9 +19,9 @@ export default async function AdminPage() {
 
   const { data: settings } = await supabase
     .from("settings")
-    .select("allowed_domains")
+    .select("allowed_domains, require_corporate_verification")
     .eq("id", true)
-    .maybeSingle<{ allowed_domains: string[] }>();
+    .maybeSingle<{ allowed_domains: string[]; require_corporate_verification: boolean }>();
 
   const { data: centers } = await supabase
     .from("work_centers")
@@ -37,6 +37,7 @@ export default async function AdminPage() {
       <h1 className="text-lg font-semibold">Administración</h1>
       <AdminPanel
         domains={settings?.allowed_domains ?? []}
+        requireVerification={settings?.require_corporate_verification ?? true}
         centers={centers ?? []}
         people={people}
       />

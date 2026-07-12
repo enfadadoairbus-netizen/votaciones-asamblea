@@ -10,15 +10,23 @@ const base = [
   { href: "/app/perfil", label: "Perfil", gated: false },
 ];
 
-export default function Nav({ role, verified }: { role: Role; verified: boolean }) {
+export default function Nav({
+  role,
+  verified,
+  requireVerification,
+}: {
+  role: Role;
+  verified: boolean;
+  requireVerification: boolean;
+}) {
   const pathname = usePathname();
   const tabs = [...base];
   if (role === "organizer" || role === "admin")
     tabs.splice(1, 0, { href: "/app/crear", label: "Crear", gated: false });
   if (role === "admin") tabs.push({ href: "/app/admin", label: "Admin", gated: false });
 
-  // Empleado sin verificar: no puede votar ni ver estadísticas.
-  const locked = role === "employee" && !verified;
+  // Empleado sin verificar: no puede votar ni ver estadísticas (solo si se exige verificación).
+  const locked = role === "employee" && requireVerification && !verified;
 
   return (
     <nav className="flex gap-1 overflow-x-auto border-b border-black/10 bg-card px-2">

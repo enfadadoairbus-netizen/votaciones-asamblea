@@ -76,9 +76,16 @@ export default async function EstadisticasPage() {
     .eq("id", user!.id)
     .single<Pick<Profile, "role" | "corporate_email_verified">>();
 
+  const { data: settings } = await supabase
+    .from("settings")
+    .select("require_corporate_verification")
+    .eq("id", true)
+    .maybeSingle<{ require_corporate_verification: boolean }>();
+  const requireVerification = settings?.require_corporate_verification ?? true;
+
   const canSeeLive = profile?.role === "organizer" || profile?.role === "admin";
 
-  if (profile?.role === "employee" && !profile.corporate_email_verified) {
+  if (requireVerification && profile?.role === "employee" && !profile.corporate_email_verified) {
     return (
       <div className="card text-center text-muted">
         <p>Para ver las estadísticas necesitas verificar tu correo corporativo.</p>

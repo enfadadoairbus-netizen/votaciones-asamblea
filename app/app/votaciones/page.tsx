@@ -18,7 +18,14 @@ export default async function VotacionesPage() {
     .eq("id", user!.id)
     .single<Pick<Profile, "role" | "corporate_email_verified">>();
 
-  if (profile?.role === "employee" && !profile.corporate_email_verified) {
+  const { data: settings } = await supabase
+    .from("settings")
+    .select("require_corporate_verification")
+    .eq("id", true)
+    .maybeSingle<{ require_corporate_verification: boolean }>();
+  const requireVerification = settings?.require_corporate_verification ?? true;
+
+  if (requireVerification && profile?.role === "employee" && !profile.corporate_email_verified) {
     return (
       <div className="card text-center text-muted">
         <p>Para votar necesitas verificar tu correo corporativo.</p>

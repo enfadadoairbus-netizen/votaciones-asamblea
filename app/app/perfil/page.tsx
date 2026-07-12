@@ -22,10 +22,21 @@ export default async function PerfilPage() {
     .order("name")
     .returns<WorkCenter[]>();
 
+  const { data: settings } = await supabase
+    .from("settings")
+    .select("require_corporate_verification")
+    .eq("id", true)
+    .maybeSingle<{ require_corporate_verification: boolean }>();
+
   return (
     <div className="space-y-4">
       <h1 className="text-lg font-semibold">Perfil</h1>
-      <ProfileForm profile={profile!} centers={centers ?? []} email={user!.email ?? ""} />
+      <ProfileForm
+        profile={profile!}
+        centers={centers ?? []}
+        email={user!.email ?? ""}
+        requireVerification={settings?.require_corporate_verification ?? true}
+      />
     </div>
   );
 }
