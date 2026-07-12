@@ -1,10 +1,19 @@
 import { signIn, signUp } from "./actions";
+import { createClient } from "@/lib/supabase/server";
+import type { WorkCenter } from "@/lib/types";
 
-export default function LoginPage({
+export default async function LoginPage({
   searchParams,
 }: {
   searchParams: { error?: string; message?: string };
 }) {
+  const supabase = createClient();
+  const { data: centers } = await supabase
+    .from("work_centers")
+    .select("id, name, code")
+    .order("name")
+    .returns<WorkCenter[]>();
+
   return (
     <main className="min-h-screen px-4 py-10">
       <div className="mx-auto w-full max-w-md">
@@ -69,6 +78,15 @@ export default function LoginPage({
           <div>
             <input name="corporate_email" type="email" placeholder="Correo corporativo (Airbus)" className="input" />
             <p className="mt-1 text-xs text-muted">Tu correo de empresa, para acreditar que eres empleado/a. Podrás completarlo también desde tu perfil.</p>
+          </div>
+          <div>
+            <select name="work_center_id" required defaultValue="" className="input">
+              <option value="" disabled>Centro de trabajo…</option>
+              {(centers ?? []).map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-muted">Elige tu centro. Podrás cambiarlo luego desde tu perfil.</p>
           </div>
           <input name="password" type="password" required minLength={8} placeholder="Contraseña (mín. 8)" className="input" />
           <button className="btn-outline w-full">Crear cuenta</button>

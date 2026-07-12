@@ -21,6 +21,7 @@ export async function signUp(formData: FormData) {
   const password = String(formData.get("password"));
   const fullName = String(formData.get("full_name") ?? "");
   const corporateEmail = String(formData.get("corporate_email") ?? "").trim().toLowerCase();
+  const workCenterId = String(formData.get("work_center_id") ?? "");
   const supabase = createClient();
   const { error } = await supabase.auth.signUp({
     email,
@@ -28,6 +29,8 @@ export async function signUp(formData: FormData) {
     options: {
       data: {
         full_name: fullName,
+        // Centro elegido en el registro (lo guarda handle_new_user).
+        ...(workCenterId ? { work_center_id: workCenterId } : {}),
         // Correo corporativo opcional: se guarda sin verificar; el empleado lo
         // verifica luego desde su perfil. La cuenta se crea con el correo personal.
         ...(corporateEmail ? { corporate_email: corporateEmail } : {}),
