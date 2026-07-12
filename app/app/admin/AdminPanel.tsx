@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { WorkCenter, Profile, Role } from "@/lib/types";
@@ -19,10 +19,18 @@ export default function AdminPanel({
   const [domainText, setDomainText] = useState(domains.join(", "));
   const [newCenter, setNewCenter] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
-  // Correo corporativo editable por persona (para la verificación manual)
+  // Correo corporativo editable por persona (para la verificación individual)
   const [corpEmails, setCorpEmails] = useState<Record<string, string>>(
     Object.fromEntries(people.map((p) => [p.id, p.corporate_email ?? ""]))
   );
+  // Selección para acciones en lote
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
+
+  const selectedIds = useMemo(
+    () => people.map((p) => p.id).filter((id) => selected[id]),
+    [selected, people]
+  );
+  const allSelected = people.length > 0 && selectedIds.length === people.length;
 
   async function saveDomains() {
     setMsg(null);
@@ -48,9 +56,8 @@ export default function AdminPanel({
     router.refresh();
   }
 
-  // Verificación manual (red de seguridad si el correo no llega).
-  // El admin puede acreditar a una persona sin código de email.
-  async function verify(id: string) {
+  // --- Verificación manual (red de seguridad si el correo no llega) ---
+  async function verifyOne(id: string) {
     setMsg(null);
     const email = (corpEmails[id] ?? "").trim().toLowerCase();
     if (!email) {
@@ -65,13 +72,39 @@ export default function AdminPanel({
     router.refresh();
   }
 
-  async function unverify(id: string) {
+  async function unverifyOne(id: string) {
     setMsg(null);
     const { error } = await supabase
       .from("profiles")
       .update({ corporate_email_verified: false })
       .eq("id", id);
     setMsg(error ? error.message : "Verificación anulada.");
+    router.refresh();
+  }
+
+  // --- Acciones en lote (una sola consulta) ---
+  function toggleAll(value: boolean) {
+    setSelected(value ? Object.fromEntries(people.map((p) => [p.id, true])) : {});
+  }
+
+  async function bulkSetVerified(value: boolean) {
+    setMsg(null);
+    if (selectedIds.length === 0) {
+      setMsg("Selecciona al menos una persona.");
+      return;
+    }
+    const { error } = await supabase
+      .from("profiles")
+      .update({ corporate_email_verified: value })
+      .in("id", selectedIds);
+    setMsg(
+      error
+        ? error.message
+        : value
+        ? `${selectedIds.length} persona(s) verificada(s).`
+        : `Verificación anulada a ${selectedIds.length} persona(s).`
+    );
+    setSelected({});
     router.refresh();
   }
 
@@ -103,13 +136,43 @@ export default function AdminPanel({
         <h2 className="text-sm font-semibold">Personas</h2>
         <p className="text-xs text-muted">
           Rol y verificación del correo corporativo. La verificación manual es la red de
-          seguridad para quien no reciba el código por email.
+          seguridad para quien no reciba el código por email. Puedes marcar varias a la vez.
         </p>
+
+        {/* Barra de acciones en lote */}
+        <div className="flex flex-wrap items-center gap-2 rounded-md bg-black/[0.03] px-3 py-2">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={allSelected}
+              onChange={(e) => toggleAll(e.target.checked)}
+            />
+            Seleccionar todos
+          </label>
+          <span className="text-xs text-muted">({selectedIds.length} seleccionadas)</span>
+          <div className="ml-auto flex gap-2">
+            <button className="btn-brand" onClick={() => bulkSetVerified(true)}>
+              Verificar seleccionadas
+            </button>
+            <button className="btn-outline" onClick={() => bulkSetVerified(false)}>
+              Anular seleccionadas
+            </button>
+          </div>
+        </div>
+
         <div className="divide-y divide-black/5">
           {people.map((p) => (
             <div key={p.id} className="space-y-2 py-3">
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={!!selected[p.id]}
+                  onChange={(e) =>
+                    setSelected((s) => ({ ...s, [p.id]: e.target.checked }))
+                  }
+                  aria-label={`Seleccionar ${p.full_name || "persona"}`}
+                />
+                <div className="min-w-0 flex-1">
                   <p className="truncate text-sm">{p.full_name || "(sin nombre)"}</p>
                   <p className="truncate text-xs text-muted">
                     {p.corporate_email_verified ? (
@@ -130,7 +193,7 @@ export default function AdminPanel({
                 </select>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 pl-7">
                 <input
                   className="input flex-1 min-w-[12rem]"
                   type="email"
@@ -141,11 +204,11 @@ export default function AdminPanel({
                   }
                 />
                 {p.corporate_email_verified ? (
-                  <button className="btn-outline" onClick={() => unverify(p.id)}>
+                  <button className="btn-outline" onClick={() => unverifyOne(p.id)}>
                     Anular
                   </button>
                 ) : (
-                  <button className="btn-brand" onClick={() => verify(p.id)}>
+                  <button className="btn-brand" onClick={() => verifyOne(p.id)}>
                     Verificar
                   </button>
                 )}
