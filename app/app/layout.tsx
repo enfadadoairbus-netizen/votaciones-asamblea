@@ -32,7 +32,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen">
       <header className="flex items-center justify-between border-b border-black/10 bg-card px-4 py-3">
-        <span className="font-semibold tracking-tight">Asamblea</span>
+        <span className="font-semibold tracking-tight">Asamblea Empleados 1J</span>
         <div className="flex items-center gap-3 text-sm">
           <span className="text-muted">{profile?.full_name || user.email}</span>
           <form action={signOut}>

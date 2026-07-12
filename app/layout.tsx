@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Votaciones de Asamblea",
-  description: "Votación en tiempo real para asambleas.",
+  title: "Asamblea Empleados 1J",
+  description: "Votación secreta de las propuestas de la asamblea, desde tu móvil.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
