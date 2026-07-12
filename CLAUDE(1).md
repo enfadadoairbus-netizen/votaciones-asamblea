@@ -53,20 +53,29 @@ RPCs: `cast_vote(p_proposal, p_choice, p_code)`, `confirm_corporate_verification
 
 ## Estado actual
 Hecho: esquema + RLS + voto secreto + roles + crear propuesta + votar + perfil + admin +
-estadísticas; migraciones 0001–0003 aplicadas.
+estadísticas. **Migraciones 0001–0004 aplicadas** (comprobado contra la BD, no fiarse del
+historial: en su día 0002 no se había aplicado; ya está).
 
-Pendiente (tareas actuales):
-1. **Registro con dos campos**: personal (cuenta, obligatorio) y corporativo (opcional,
-   puede añadirse luego). Separar en `app/login`.
-2. **Edge Function `request-corporate-verification`**: valida dominio con `is_allowed_domain`,
-   comprueba que el corporativo no está ya verificado en otra cuenta, genera código, guarda
-   su hash en `corporate_verifications` con caducidad, y lo envía SOLO al corporativo. El
-   código en claro no vuelve al cliente. Proveedor de email por variable de entorno.
-3. **UX "verifícate luego"** en `app/app/perfil`: añadir/reenviar/confirmar el corporativo
-   en cualquier momento; ocultar o bloquear En curso (voto) y Estadísticas hasta verificar.
+Flujo de verificación corporativa COMPLETO y probado end-to-end en BD:
+1. **Registro con dos campos** (`app/login`): personal (cuenta, obligatorio) y corporativo
+   (opcional, se guarda vía `handle_new_user` desde el metadata). ✅
+2. **Edge Function `request-corporate-verification`** (`supabase/functions/…`): autentica por
+   JWT, llama al RPC `issue_corporate_verification` (solo `service_role`) que valida dominio,
+   comprueba unicidad, genera un código de 6 dígitos, guarda su hash (bcrypt, caduca 15 min) e
+   invalida los previos; el código en claro se devuelve SOLO a la función, que lo envía por
+   correo con **Resend** (`RESEND_API_KEY`, `MAIL_FROM`). Nunca vuelve al navegador. ✅
+3. **UX "verifícate luego"** (`app/app/perfil`): añadir/enviar/reenviar/confirmar el corporativo
+   en cualquier momento; nav bloquea En curso y Estadísticas para empleado no verificado, con
+   guarda también server-side en ambas páginas. ✅
+4. **Unicidad**: índice único parcial `profiles(lower(corporate_email)) where verified`. ✅
+5. **Gating de estadísticas** añadido en `get_proposal_stats` (empleado debe estar verificado). ✅
 
-Próximo bloque tras esto: Web Push (VAPID) para comunicados ad-hoc y aviso de nueva
-propuesta en tu centro.
+Config pendiente para producción (no código):
+- Secrets de la Edge Function en Supabase: `RESEND_API_KEY` y `MAIL_FROM` (dominio verificado
+  en Resend). Sin ellos, la emisión responde 500 "envío no configurado".
+- Deploy en Vercel con `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+
+Próximo bloque: Web Push (VAPID) para comunicados ad-hoc y aviso de nueva propuesta en tu centro.
 
 ## Reglas de trabajo
 - Aplicar migraciones en orden y no editar las ya aplicadas; los cambios de esquema van en

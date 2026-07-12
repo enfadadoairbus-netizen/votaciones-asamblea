@@ -19,8 +19,13 @@ export default function ProfileForm({
   const [centerId, setCenterId] = useState(profile.work_center_id ?? "");
   const [msg, setMsg] = useState<string | null>(null);
 
+  const [corpEmail, setCorpEmail] = useState(profile.corporate_email ?? "");
   const [token, setToken] = useState("");
+  const [codeSent, setCodeSent] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const [verifyMsg, setVerifyMsg] = useState<string | null>(null);
+  const [verifyErr, setVerifyErr] = useState<string | null>(null);
 
   async function save() {
     setMsg(null);
@@ -33,13 +38,57 @@ export default function ProfileForm({
     router.refresh();
   }
 
-  async function confirmToken() {
+  async function sendCode() {
+    setVerifyErr(null);
     setVerifyMsg(null);
+    const email = corpEmail.trim().toLowerCase();
+    if (!email) {
+      setVerifyErr("Escribe tu correo corporativo.");
+      return;
+    }
+    setSending(true);
+    const supabase = createClient();
+    const { error } = await supabase.functions.invoke("request-corporate-verification", {
+      body: { corporate_email: email },
+    });
+    setSending(false);
+    if (error) {
+      // El cuerpo del error del edge trae el mensaje real (dominio no admitido, etc.)
+      let detail = error.message;
+      try {
+        const ctx = (error as { context?: Response }).context;
+        if (ctx) {
+          const body = await ctx.json();
+          if (body?.error) detail = body.error;
+        }
+      } catch {
+        /* usa el mensaje por defecto */
+      }
+      setVerifyErr(detail);
+      return;
+    }
+    setCodeSent(true);
+    setVerifyMsg(`Te hemos enviado un código a ${email}. Revisa tu correo de empresa.`);
+  }
+
+  async function confirmToken() {
+    setVerifyErr(null);
+    setVerifyMsg(null);
+    if (!token.trim()) {
+      setVerifyErr("Introduce el código que has recibido.");
+      return;
+    }
+    setVerifying(true);
     const supabase = createClient();
     const { error } = await supabase.rpc("confirm_corporate_verification", {
       p_token: token.trim(),
     });
-    setVerifyMsg(error ? error.message : "Correo corporativo verificado.");
+    setVerifying(false);
+    if (error) {
+      setVerifyErr(error.message);
+      return;
+    }
+    setVerifyMsg("Correo corporativo verificado. Ya puedes votar.");
     router.refresh();
   }
 
@@ -47,7 +96,7 @@ export default function ProfileForm({
     <div className="space-y-4">
       <div className="card space-y-3">
         <div>
-          <label className="text-xs font-medium text-muted">Correo de acceso</label>
+          <label className="text-xs font-medium text-muted">Correo de acceso (personal)</label>
           <p className="text-sm">{email}</p>
         </div>
         <div>
@@ -76,17 +125,44 @@ export default function ProfileForm({
         ) : (
           <>
             <p className="text-sm text-muted">
-              Recibirás un código en tu correo de empresa. Introdúcelo aquí para acreditarte como
-              empleada y poder votar. (El envío del código lo hará la Edge Function de verificación.)
+              Verifica tu correo de empresa para acreditarte como empleada y poder votar.
+              Puedes hacerlo ahora o más adelante: te enviaremos un código a ese correo.
             </p>
-            <input
-              className="input"
-              placeholder="Código de verificación"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-            />
-            <button className="btn-outline" onClick={confirmToken}>Verificar</button>
-            {verifyMsg && <p className="text-sm text-muted">{verifyMsg}</p>}
+
+            <div>
+              <label className="text-xs font-medium text-muted" htmlFor="ce">Correo corporativo</label>
+              <input
+                id="ce"
+                className="input mt-1"
+                type="email"
+                placeholder="nombre@empresa.com"
+                value={corpEmail}
+                onChange={(e) => setCorpEmail(e.target.value)}
+              />
+            </div>
+            <button className="btn-brand" onClick={sendCode} disabled={sending}>
+              {sending ? "Enviando…" : codeSent ? "Reenviar código" : "Enviar código"}
+            </button>
+
+            {codeSent && (
+              <div className="space-y-2 border-t border-black/10 pt-3">
+                <label className="text-xs font-medium text-muted" htmlFor="tk">Código de verificación</label>
+                <input
+                  id="tk"
+                  className="input"
+                  inputMode="numeric"
+                  placeholder="6 dígitos"
+                  value={token}
+                  onChange={(e) => setToken(e.target.value)}
+                />
+                <button className="btn-outline" onClick={confirmToken} disabled={verifying}>
+                  {verifying ? "Verificando…" : "Verificar"}
+                </button>
+              </div>
+            )}
+
+            {verifyMsg && <p className="text-sm text-favor">{verifyMsg}</p>}
+            {verifyErr && <p className="text-sm text-contra">{verifyErr}</p>}
           </>
         )}
       </div>
