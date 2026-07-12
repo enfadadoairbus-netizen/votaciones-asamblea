@@ -51,10 +51,30 @@ centros de trabajo, y para gestionar roles.
   - `admin` — dominios, centros y roles.
 - `lib/supabase` — clientes de navegador/servidor y middleware de sesión.
 
-## Pendiente (Edge Functions — siguiente paso)
+## Verificación del correo corporativo (Edge Function)
 
-- **Verificación corporativa**: valida el dominio, genera el token, lo guarda hasheado y lo
-  envía SOLO al correo de empresa. El token en claro nunca vuelve al cliente.
+La emisión del código está en `supabase/functions/request-corporate-verification`. Despliegue
+y configuración:
+
+```bash
+# Desplegar la función
+supabase functions deploy request-corporate-verification
+
+# Secrets (envío de correo con Resend; usa un dominio verificado en Resend)
+supabase secrets set RESEND_API_KEY=re_xxx
+supabase secrets set MAIL_FROM="Asamblea <no-reply@tudominio.com>"
+```
+
+`SUPABASE_URL`, `SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY` los inyecta la plataforma;
+no hay que configurarlos. Sin `RESEND_API_KEY`, la función responde 500 ("envío no configurado").
+
+El flujo: el navegador llama a la función con el correo corporativo → la función valida el
+dominio y la unicidad vía RPC `issue_corporate_verification` (solo `service_role`), guarda el
+hash del código y lo envía SOLO a ese correo. El usuario introduce el código en su perfil
+(`confirm_corporate_verification`). El código en claro nunca vuelve al cliente.
+
+## Pendiente
+
 - **Push**: Web Push con VAPID para comunicados y para el aviso de nueva propuesta en tu centro.
 
 ## Notas de seguridad

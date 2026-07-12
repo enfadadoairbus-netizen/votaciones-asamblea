@@ -20,16 +20,24 @@ export async function signUp(formData: FormData) {
   const email = String(formData.get("email"));
   const password = String(formData.get("password"));
   const fullName = String(formData.get("full_name") ?? "");
+  const corporateEmail = String(formData.get("corporate_email") ?? "").trim().toLowerCase();
   const supabase = createClient();
   const { error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { full_name: fullName } },
+    options: {
+      data: {
+        full_name: fullName,
+        // Correo corporativo opcional: se guarda sin verificar; el empleado lo
+        // verifica luego desde su perfil. La cuenta se crea con el correo personal.
+        ...(corporateEmail ? { corporate_email: corporateEmail } : {}),
+      },
+    },
   });
   if (error) {
     redirect("/login?error=" + encodeURIComponent(error.message));
   }
-  redirect("/login?message=" + encodeURIComponent("Revisa tu correo para confirmar la cuenta."));
+  redirect("/login?message=" + encodeURIComponent("Revisa tu correo personal para confirmar la cuenta."));
 }
 
 export async function signOut() {

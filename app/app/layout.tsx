@@ -19,6 +19,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .single<Profile>();
 
   const role = profile?.role ?? "employee";
+  const verified = !!profile?.corporate_email_verified;
 
   return (
     <div className="min-h-screen">
@@ -32,9 +33,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </header>
 
-      <Nav role={role} />
+      <Nav role={role} verified={verified} />
 
-      {!profile?.corporate_email_verified && (
+      {!verified && (
         <div className="bg-contra/10 px-4 py-2 text-sm text-contra">
           Aún no puedes votar: verifica tu correo corporativo desde{" "}
           <Link href="/app/perfil" className="underline">

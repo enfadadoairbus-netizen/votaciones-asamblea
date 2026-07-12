@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import type { Proposal } from "@/lib/types";
+import type { Proposal, Profile } from "@/lib/types";
 import VoteCard from "./VoteCard";
 
 export const dynamic = "force-dynamic";
@@ -7,6 +8,26 @@ export const dynamic = "force-dynamic";
 export default async function VotacionesPage() {
   const supabase = createClient();
   const now = new Date().toISOString();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, corporate_email_verified")
+    .eq("id", user!.id)
+    .single<Pick<Profile, "role" | "corporate_email_verified">>();
+
+  if (profile?.role === "employee" && !profile.corporate_email_verified) {
+    return (
+      <div className="card text-center text-muted">
+        <p>Para votar necesitas verificar tu correo corporativo.</p>
+        <Link href="/app/perfil" className="mt-2 inline-block text-brand underline">
+          Ir a mi perfil
+        </Link>
+      </div>
+    );
+  }
 
   const { data: proposals } = await supabase
     .from("proposals")

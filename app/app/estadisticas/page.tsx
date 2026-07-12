@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { Proposal, ProposalStat, Profile } from "@/lib/types";
 
@@ -71,11 +72,22 @@ export default async function EstadisticasPage() {
   } = await supabase.auth.getUser();
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, corporate_email_verified")
     .eq("id", user!.id)
-    .single<Pick<Profile, "role">>();
+    .single<Pick<Profile, "role" | "corporate_email_verified">>();
 
   const canSeeLive = profile?.role === "organizer" || profile?.role === "admin";
+
+  if (profile?.role === "employee" && !profile.corporate_email_verified) {
+    return (
+      <div className="card text-center text-muted">
+        <p>Para ver las estadísticas necesitas verificar tu correo corporativo.</p>
+        <Link href="/app/perfil" className="mt-2 inline-block text-brand underline">
+          Ir a mi perfil
+        </Link>
+      </div>
+    );
+  }
   const statuses = canSeeLive ? ["active", "closed"] : ["closed"];
 
   const { data: proposals } = await supabase
