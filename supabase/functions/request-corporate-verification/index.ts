@@ -6,15 +6,17 @@
 //   2. Llama al RPC issue_corporate_verification (service_role): valida el
 //      dominio, comprueba unicidad, guarda el hash del código y lo devuelve
 //      EN CLARO solo aquí (servidor). El código nunca vuelve al navegador.
-//   3. Envía el código SOLO al correo corporativo (proveedor: Resend).
+//   3. Envía el código SOLO al correo corporativo por SMTP de Gmail.
 //
-// Secrets requeridos (supabase secrets set ...):
-//   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY  (inyectados por la plataforma)
-//   RESEND_API_KEY   -> clave del proveedor de email
-//   MAIL_FROM        -> remitente, p.ej. "Asamblea <no-reply@tudominio.com>"
+// Secrets requeridos (Supabase → Edge Functions → Secrets):
+//   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ANON_KEY (los pone la plataforma)
+//   GMAIL_USER          -> la cuenta Gmail dedicada (p.ej. votaciones.comite@gmail.com)
+//   GMAIL_APP_PASSWORD  -> contraseña de aplicación de Google (16 caracteres, sin espacios)
+//   MAIL_FROM           -> opcional; remitente visible. Por defecto usa GMAIL_USER.
 // =====================================================================
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -65,36 +67,40 @@ Deno.serve(async (req) => {
   );
   if (rpcErr) return json({ error: rpcErr.message }, 400);
 
-  // Envío del correo (solo al corporativo). El código nunca vuelve al cliente.
-  const resendKey = Deno.env.get("RESEND_API_KEY");
-  const from = Deno.env.get("MAIL_FROM") ?? "Asamblea <onboarding@resend.dev>";
-  if (!resendKey) {
+  // Envío del correo por SMTP de Gmail (solo al corporativo).
+  const gmailUser = Deno.env.get("GMAIL_USER");
+  const gmailPass = Deno.env.get("GMAIL_APP_PASSWORD");
+  const from = Deno.env.get("MAIL_FROM") ??
+    (gmailUser ? `Votaciones Asamblea <${gmailUser}>` : "");
+  if (!gmailUser || !gmailPass) {
     return json(
-      { error: "El envío de correo no está configurado (RESEND_API_KEY)." },
+      { error: "El envío de correo no está configurado (GMAIL_USER/GMAIL_APP_PASSWORD)." },
       500,
     );
   }
 
-  const mail = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${resendKey}`,
-      "Content-Type": "application/json",
+  const client = new SMTPClient({
+    connection: {
+      hostname: "smtp.gmail.com",
+      port: 465,
+      tls: true,
+      auth: { username: gmailUser, password: gmailPass },
     },
-    body: JSON.stringify({
+  });
+
+  try {
+    await client.send({
       from,
-      to: [email],
+      to: email,
       subject: "Tu código de verificación — Votaciones de Asamblea",
-      text:
+      content:
         `Tu código de verificación es: ${code}\n\n` +
         `Introdúcelo en tu perfil para acreditar tu correo corporativo y poder votar.\n` +
         `El código caduca en 15 minutos. Si no has solicitado esto, ignora este correo.`,
-    }),
-  });
-
-  if (!mail.ok) {
-    const detail = await mail.text();
-    console.error("Fallo al enviar correo:", detail);
+    });
+    await client.close();
+  } catch (e) {
+    console.error("Fallo al enviar correo (SMTP):", e);
     return json({ error: "No se pudo enviar el correo de verificación." }, 502);
   }
 
