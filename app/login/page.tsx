@@ -76,8 +76,8 @@ export default async function LoginPage({
             <p className="mt-1 text-xs text-muted">Con este correo entras y recuperas la contraseña. Es obligatorio.</p>
           </div>
           <div>
-            <input name="corporate_email" type="email" placeholder="Correo corporativo (Airbus)" className="input" />
-            <p className="mt-1 text-xs text-muted">Tu correo de empresa, para acreditar que eres empleado/a. Podrás completarlo también desde tu perfil.</p>
+            <input name="corporate_email" type="email" required placeholder="Correo corporativo (Airbus)" className="input" />
+            <p className="mt-1 text-xs text-muted">Tu correo de empresa, para acreditar que eres empleado/a. Obligatorio.</p>
           </div>
           <div>
             <select name="work_center_id" required defaultValue="" className="input">

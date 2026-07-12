@@ -2,8 +2,9 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/login/actions";
-import type { Profile } from "@/lib/types";
+import type { Profile, WorkCenter } from "@/lib/types";
 import Nav from "./nav";
+import CenterGate from "./CenterGate";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
@@ -28,6 +29,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const verified = !!profile?.corporate_email_verified;
   const requireVerification = settings?.require_corporate_verification ?? true;
   const showVerifyNudge = requireVerification && !verified;
+  const needsCenter = !profile?.work_center_id;
+
+  let centers: WorkCenter[] = [];
+  if (needsCenter) {
+    const { data } = await supabase
+      .from("work_centers")
+      .select("id, name, code")
+      .order("name")
+      .returns<WorkCenter[]>();
+    centers = data ?? [];
+  }
 
   return (
     <div className="min-h-screen">
@@ -54,6 +66,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       )}
 
       <main className="mx-auto max-w-2xl px-4 py-6">{children}</main>
+
+      {needsCenter && profile && (
+        <CenterGate profileId={profile.id} centers={centers} />
+      )}
     </div>
   );
 }
