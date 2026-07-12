@@ -6,15 +6,38 @@ export default function LoginPage({
   searchParams: { error?: string; message?: string };
 }) {
   return (
-    <main className="min-h-screen flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-sm">
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold tracking-tight">Votaciones de Asamblea</h1>
-          <p className="mt-1 text-sm text-muted">
-            Entra con tu cuenta o regístrate. Tu cuenta usa tu <strong>correo personal</strong>;
-            el <strong>corporativo</strong> lo verificas después, desde tu perfil, para poder votar.
+    <main className="min-h-screen px-4 py-10">
+      <div className="mx-auto w-full max-w-md">
+        {/* Cabecera / objetivo de la app */}
+        <header className="mb-8">
+          <span className="inline-block rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand">
+            Votación de la asamblea
+          </span>
+          <h1 className="mt-3 text-3xl font-bold tracking-tight text-ink">
+            Asamblea Empleados 1J
+          </h1>
+          <p className="mt-3 text-sm leading-relaxed text-muted">
+            Plataforma para votar las propuestas de la asamblea de forma{" "}
+            <strong className="text-ink">rápida, secreta y desde tu móvil</strong>. Sustituye a la
+            votación a mano alzada: cada empleado vota una sola vez, el voto es anónimo y los
+            resultados se publican de forma transparente al cerrar cada votación.
           </p>
-        </div>
+
+          <ul className="mt-5 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+            <li className="flex items-center gap-2 rounded-lg border border-black/10 bg-card px-3 py-2">
+              <span aria-hidden>🔒</span> Voto secreto y anónimo
+            </li>
+            <li className="flex items-center gap-2 rounded-lg border border-black/10 bg-card px-3 py-2">
+              <span aria-hidden>📱</span> Vota desde tu móvil
+            </li>
+            <li className="flex items-center gap-2 rounded-lg border border-black/10 bg-card px-3 py-2">
+              <span aria-hidden>🏭</span> Por centros de trabajo
+            </li>
+            <li className="flex items-center gap-2 rounded-lg border border-black/10 bg-card px-3 py-2">
+              <span aria-hidden>📊</span> Resultados transparentes
+            </li>
+          </ul>
+        </header>
 
         {searchParams.error && (
           <p className="mb-4 rounded-md bg-contra/10 px-3 py-2 text-sm text-contra">
@@ -44,12 +67,17 @@ export default function LoginPage({
             <p className="mt-1 text-xs text-muted">Con este correo entras y recuperas la contraseña. Es obligatorio.</p>
           </div>
           <div>
-            <input name="corporate_email" type="email" placeholder="Correo corporativo (opcional)" className="input" />
-            <p className="mt-1 text-xs text-muted">Opcional ahora. Sirve para acreditar que eres empleada; puedes añadirlo y verificarlo luego.</p>
+            <input name="corporate_email" type="email" placeholder="Correo corporativo (Airbus)" className="input" />
+            <p className="mt-1 text-xs text-muted">Tu correo de empresa, para acreditar que eres empleado/a. Podrás completarlo también desde tu perfil.</p>
           </div>
           <input name="password" type="password" required minLength={8} placeholder="Contraseña (mín. 8)" className="input" />
           <button className="btn-outline w-full">Crear cuenta</button>
         </form>
+
+        <p className="mt-6 text-center text-xs text-muted">
+          El voto es secreto: nadie —ni la organización— puede ver qué has votado. Solo se
+          publican los recuentos agregados.
+        </p>
       </div>
     </main>
   );
